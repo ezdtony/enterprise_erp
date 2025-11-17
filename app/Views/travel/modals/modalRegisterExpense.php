@@ -19,8 +19,17 @@
                     <input type="hidden" id="expense_request_id" name="request_id">
 
                     <div class="row g-3">
+                        <!-- Solicitud -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Solicitud</label>
+                            <select id="expense_request" name="request_id" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <?php foreach ($requests as $request): ?>
+                                    <option value="<?= $request->id ?>">#SDV-<?= $request->id ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-            
                         <!-- Categoría -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Categoría</label>

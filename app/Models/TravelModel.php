@@ -26,7 +26,7 @@ class TravelModel
             ORDER BY tr.id DESC
         ");
 
-        return $query->fetchAll(PDO::FETCH_ASSOC);
+        return $query->fetchAll(PDO::FETCH_OBJ);
     }
 
     public function getById($id)
@@ -134,11 +134,11 @@ class TravelModel
     {
         $stmt = $this->db->prepare("
         INSERT INTO travel_expenses 
-        (category_id, employee_id, project_id, amount, expense_date, description, is_deductible, has_invoice)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (request_id, category_id, employee_id, project_id, amount, expense_date, description, is_deductible, has_invoice)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
-
         $success = $stmt->execute([
+            $data['category_id'],
             $data['category_id'],
             $data['employee_id'],
             $data['project_id'],
