@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /antonio_proyects/enterprise-erp/public/
+
+    # Si existe archivo o carpeta, no redirigir
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Todo va a index.php
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

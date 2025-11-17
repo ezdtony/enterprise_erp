@@ -1,0 +1,12 @@
+{
+  "name": "enterprise-erp/core",
+  "description": "ERP empresarial con integración BBVA (MVC en PHP).",
+  "require": {
+    "vlucas/phpdotenv": "^5.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  }
+}
