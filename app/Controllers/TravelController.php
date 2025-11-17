@@ -6,13 +6,8 @@ use App\Models\TravelModel;
 use App\Models\Employee;
 use App\Models\ProjectModel;
 
-class TravelController  extends BaseController
+class TravelController extends BaseController
 {
-
-    /* =========================================================
-   MANEJO DIRECTO DE PETICIONES AJAX SIN ROUTER
-   ========================================================= */
-
     public function index()
     {
         $model = new TravelModel();
@@ -25,6 +20,7 @@ class TravelController  extends BaseController
 
         require_once __DIR__ . '/../Views/travel/index.php';
     }
+
     public function check_expenses()
     {
         $model = new TravelModel();
@@ -54,39 +50,31 @@ class TravelController  extends BaseController
             }
         }
 
-        $rawAmount = $_POST['amount_requested'];
+        $amount = floatval(str_replace([',', '$'], '', $_POST['amount_requested']));
 
-        $amount = floatval(
-            str_replace([',', '$'], '', $rawAmount)
-        );
-        // ================================
-        // GUARDAR EN BD
-        // ================================
         $model = new TravelModel();
 
         $data = [
-            "employee_id"      => $_POST['employee_id'],
-            "project_id"       => $_POST['project_id'],
-            "purpose"          => $_POST['purpose'],
+            "employee_id" => $_POST['employee_id'],
+            "project_id" => $_POST['project_id'],
+            "purpose" => $_POST['purpose'],
             "amount_requested" => $amount,
-            "max_pay_date"       => $_POST['payDate'],
-            "status"           => "pending"
+            "max_pay_date" => $_POST['payDate'],
+            "status" => "pending"
         ];
 
         $saved = $model->storeTravelRequest($data);
 
         echo json_encode([
             "response" => $saved,
-            "message" => $saved
-                ? "Solicitud registrada correctamente."
-                : "Error al guardar en la base de datos."
+            "message" => $saved ? "Solicitud registrada correctamente." : "Error al guardar en la base de datos."
         ]);
     }
 
     public function saveExpense()
     {
         // Validaciones requeridas
-        $required = ['category_id', 'employee_id', 'project_id', 'amount', 'expense_date', 'description'];
+        $required = ['request_id', 'category_id', 'project_id', 'amount', 'expense_date', 'description'];
 
         foreach ($required as $field) {
             if (!isset($_POST[$field]) || empty($_POST[$field])) {
@@ -98,27 +86,22 @@ class TravelController  extends BaseController
             }
         }
 
-        // Normalizar monto
         $amount = floatval(str_replace([',', '$'], '', $_POST['amount']));
-
-        // ============================================
-        // GUARDAR GASTO PRINCIPAL
-        // ============================================
         $model = new TravelModel();
 
         $data = [
-            "category_id"    => $_POST['category_id'],
-            "employee_id"    => $_POST['employee_id'],
-            "project_id"     => $_POST['project_id'],
-            "amount"         => $amount,
-            "expense_date"   => $_POST['expense_date'],
-            "description"    => $_POST['description'],
-            "is_deductible"  => isset($_POST['is_deductible']) ? 1 : 0,
-            "has_invoice"    => isset($_POST['has_invoice']) ? 1 : 0,
+            "request_id" => $_POST['request_id'],
+            "category_id" => $_POST['category_id'],
+            "employee_id" => $_SESSION['user_id'],
+            "project_id" => $_POST['project_id'],
+            "amount" => $amount,
+            "expense_date" => $_POST['expense_date'],
+            "description" => $_POST['description'],
+            "is_deductible" => isset($_POST['is_deductible']) ? 1 : 0,
+            "has_invoice" => isset($_POST['has_invoice']) ? 1 : 0,
         ];
 
         $expenseId = $model->storeExpense($data);
-
         if (!$expenseId) {
             echo json_encode([
                 "response" => false,
@@ -128,21 +111,28 @@ class TravelController  extends BaseController
         }
 
         // ============================================
-        // GUARDAR FOTOS (JPG/PNG)
+        // Guardar fotos (JPG/PNG)
         // ============================================
-        if (isset($_FILES['photos']) && $_FILES['photos']['error'][0] === 0) {
-
+        if (isset($_FILES['photos']) && !empty($_FILES['photos']['name'][0])) {
+            $allowedPhotoExt = ['jpg', 'jpeg', 'png'];
             $uploadDir = __DIR__ . '/../../public/uploads/expenses/photos/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
             for ($i = 0; $i < count($_FILES['photos']['name']); $i++) {
-
                 $tmp  = $_FILES['photos']['tmp_name'][$i];
-                $ext  = pathinfo($_FILES['photos']['name'][$i], PATHINFO_EXTENSION);
+                $ext  = strtolower(pathinfo($_FILES['photos']['name'][$i], PATHINFO_EXTENSION));
+                $mime = mime_content_type($tmp);
+
+                if (!in_array($ext, $allowedPhotoExt) || strpos($mime, 'image/') !== 0) {
+                    echo json_encode([
+                        "response" => false,
+                        "message" => "Solo se permiten fotos JPG o PNG."
+                    ]);
+                    return;
+                }
 
                 $timestamp = time();
-                $filename  = "expense_{$timestamp}_{$i}." . strtolower($ext);
-
+                $filename  = "expense_{$timestamp}_{$i}." . $ext;
                 $dest = $uploadDir . $filename;
 
                 if (move_uploaded_file($tmp, $dest)) {
@@ -152,143 +142,87 @@ class TravelController  extends BaseController
         }
 
         // ============================================
-        // GUARDAR FACTURA (PDF/XML, mantener nombre)
+        // Guardar factura PDF (obligatoria)
         // ============================================
-        if (isset($_POST['has_invoice']) && isset($_FILES['invoice_file'])) {
+        if (isset($_POST['has_invoice']) && $_POST['has_invoice'] == 1) {
+            if (!isset($_FILES['invoice_pdf']) || $_FILES['invoice_pdf']['error'] !== 0) {
+                echo json_encode([
+                    "response" => false,
+                    "message" => "El PDF de la factura es obligatorio."
+                ]);
+                return;
+            }
 
-            if ($_FILES['invoice_file']['error'] === 0) {
+            $cfdi_code = isset($_POST['cfdi_code']) ? trim($_POST['cfdi_code']) : null;
+            if (!$cfdi_code) {
+                echo json_encode([
+                    "response" => false,
+                    "message" => "El CFDI es obligatorio si se marca que tiene factura."
+                ]);
+                return;
+            }
 
-                $uploadDir = __DIR__ . '/../../public/uploads/expenses/invoices/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            $uploadDir = __DIR__ . '/../../public/uploads/expenses/invoices/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
-                $tmp = $_FILES['invoice_file']['tmp_name'];
+            // PDF
+            $tmp = $_FILES['invoice_pdf']['tmp_name'];
+            $original = $_FILES['invoice_pdf']['name'];
+            $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+            $mime = mime_content_type($tmp);
 
-                $original = $_FILES['invoice_file']['name'];
-                $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+            if ($ext !== 'pdf' || $mime !== 'application/pdf') {
+                echo json_encode([
+                    "response" => false,
+                    "message" => "El archivo PDF no es válido."
+                ]);
+                return;
+            }
 
-                // Validar que sea pdf/xml
-                if ($ext === "pdf" || $ext === "xml") {
+            $cleanName = preg_replace('/[^A-Za-z0-9_\-.]/', '_', $original);
+            $filePath = $uploadDir . $cleanName;
+            if (move_uploaded_file($tmp, $filePath)) {
+                $model->storeExpenseInvoice($expenseId, $cleanName, $cfdi_code);
+            }
 
-                    // Sanitizar nombre
-                    $cleanName = preg_replace('/[^A-Za-z0-9_\-.]/', '_', $original);
-                    $filename = $cleanName;
-                } else {
-                    // Si por alguna razón suben imagen en "factura", usar genérico
-                    $filename = "invoice_" . time() . "." . $ext;
-                }
+            // XML opcional
+            if (isset($_FILES['invoice_xml']) && $_FILES['invoice_xml']['error'] === 0) {
+                $tmpXml = $_FILES['invoice_xml']['tmp_name'];
+                $originalXml = $_FILES['invoice_xml']['name'];
+                $extXml = strtolower(pathinfo($originalXml, PATHINFO_EXTENSION));
+                $mimeXml = mime_content_type($tmpXml);
 
-                $dest = $uploadDir . $filename;
-
-                if (move_uploaded_file($tmp, $dest)) {
-                    $model->storeExpenseInvoice($expenseId, $filename);
+                if ($extXml === 'xml' && in_array($mimeXml, ['text/xml', 'application/xml'])) {
+                    $cleanNameXml = preg_replace('/[^A-Za-z0-9_\-.]/', '_', $originalXml);
+                    $filePathXml = $uploadDir . $cleanNameXml;
+                    if (move_uploaded_file($tmpXml, $filePathXml)) {
+                        $model->storeExpenseInvoice($expenseId, $cleanNameXml, $cfdi_code);
+                    }
                 }
             }
         }
 
         // ============================================
-        // RESPUESTA FINAL
+        // Respuesta final
         // ============================================
         echo json_encode([
             "response" => true,
             "message" => "Gasto registrado correctamente."
         ]);
     }
-
-
-
-    public function createForm()
-    {
-        require_once __DIR__ . '/../Views/viaticos/modals/create_request.php';
-    }
-
-    public function show($id)
-    {
-        $model = new TravelModel();
-
-        $request = $model->getById($id);
-        $expenses = $model->getByRequest($id);
-        $approval = $model->getByRequest($id);
-
-        require_once __DIR__ . '/../Views/viaticos/modals/show_request.php';
-    }
-
-    public function expensesForm($id)
-    {
-        require_once __DIR__ . '/../Views/viaticos/modals/register_expense.php';
-    }
-
-    public function approvalForm($id)
-    {
-        require_once __DIR__ . '/../Views/viaticos/modals/approve_request.php';
-    }
-
-    // ============================
-    // CRUD HANDLERS (POST)
-    // ============================
-
-    public function store()
-    {
-        $model = new TravelModel();
-
-        $data = [
-            "employee_id" => $_POST['employee_id'],
-            "project_id" => $_POST['project_id'],
-            "destination" => $_POST['destination'],
-            "start_date" => $_POST['start_date'],
-            "end_date" => $_POST['end_date'],
-            "justification" => $_POST['justification']
-        ];
-
-        $model->create($data);
-
-        header("Location: " . BASE_URL . "viaticos");
-    }
-
-    public function storeExpense()
-    {
-        $model = new TravelModel();
-
-        $data = [
-            "request_id" => $_POST["request_id"],
-            "category" => $_POST["category"],
-            "amount" => $_POST["amount"],
-            "description" => $_POST["description"]
-        ];
-
-        $model->create($data);
-
-        header("Location: " . BASE_URL . "viaticos");
-    }
-
-    public function storeApproval()
-    {
-        $model = new TravelModel();
-
-        $data = [
-            "request_id" => $_POST["request_id"],
-            "approved_by" => $_POST["approved_by"],
-            "status" => $_POST["status"],
-            "notes" => $_POST["notes"]
-        ];
-
-        $model->create($data);
-
-        header("Location: " . BASE_URL . "viaticos");
-    }
 }
 
+// ======================================
+// Manejo directo de peticiones AJAX
+// ======================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-
     $controller = new TravelController();
     $action = $_POST['action'];
 
     if (method_exists($controller, $action)) {
-
-        // Llamar al método que pidió el AJAX
         $controller->{$action}();
         exit;
     } else {
-
         echo json_encode([
             "response" => false,
             "message" => "La acción '$action' no existe en TravelController."

@@ -32,4 +32,15 @@ class Employee
 
         return $results;
     }
+
+    public function getByEmail(string $user)
+    {
+        $sql = "SELECT * FROM employees WHERE email = :user OR code = :user1 AND status = 'active' LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':user', $user, PDO::PARAM_STR);
+        $stmt->bindParam(':user1', $user, PDO::PARAM_STR);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_OBJ);
+    }
 }

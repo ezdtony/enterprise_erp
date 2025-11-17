@@ -3,6 +3,10 @@
 use App\Controllers\HomeController;
 use App\Controllers\EmployeeController;
 use App\Controllers\TravelController;
+use App\Controllers\AuthController;
+
+$auth = new AuthController();
+
 
 
 // Obtener la ruta actual (sin query params)
@@ -11,9 +15,36 @@ $uri = str_replace($scriptName, '', $_SERVER['REQUEST_URI']);
 $uri = parse_url($uri, PHP_URL_PATH);
 $uri = trim($uri, '/');
 
+
+$protected_routes = ['home', 'employees', 'travel-request', 'check-expenses'];
+
+if (in_array($uri, $protected_routes)) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: " . BASE_URL . "/login");
+        exit;
+    }
+}
+
 // Enrutador básico
 switch ($uri) {
     case '':
+    case 'login':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Procesar login
+            $auth->login($_POST['user'], $_POST['password']);
+        } else {
+            // Mostrar formulario de login
+            require_once __DIR__ . '/../app/Views/login.php';
+        }
+        break;
+
+    case 'logout':
+        $auth->logout();
+        break;
+
     case 'home':
         $controller = new HomeController();
         $controller->index();

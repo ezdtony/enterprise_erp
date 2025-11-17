@@ -26,14 +26,14 @@
             <tbody>
                 <?php foreach ($requests as $r): ?>
                     <tr>
-                        <td><?= $r['id'] ?></td>
-                        <td><?= $r['employee_name'] ?></td>
-                        <td><?= $r['project_name'] ?></td>
-                        <td>$<?= number_format($r['amount_requested'], 2) ?></td>
-                        <td><?= $r['max_pay_date'] ?></td>
+                        <td><?= $r->id ?></td>
+                        <td><?= $r->employee_name ?></td>
+                        <td><?= $r->project_name ?></td>
+                        <td>$<?= number_format($r->amount_requested, 2) ?></td>
+                        <td><?= $r->max_pay_date ?></td>
                         <td>
-                            <span class="badge bg-<?= $r['status'] === 'approved' ? 'success' : 'secondary' ?>">
-                                <?= ucfirst($r['status']) ?>
+                            <span class="badge bg-<?= $r->status === 'approved' ? 'success' : 'secondary' ?>">
+                                <?= ucfirst($r->status) ?>
                             </span>
                         </td>
 
@@ -41,21 +41,21 @@
                             <button class="btn btn-sm btn-info"
                                 data-bs-toggle="modal"
                                 data-bs-target="#travelModal"
-                                onclick="loadShowForm(<?= $r['id'] ?>)">
+                                onclick="loadShowForm(<?= $r->id ?>)">
                                 Ver
                             </button>
 
                             <button class="btn btn-sm btn-warning"
                                 data-bs-toggle="modal"
                                 data-bs-target="#travelModal"
-                                onclick="loadExpensesForm(<?= $r['id'] ?>)">
+                                onclick="loadExpensesForm(<?= $r->id ?>)">
                                 Gastos
                             </button>
 
                             <button class="btn btn-sm btn-success"
                                 data-bs-toggle="modal"
                                 data-bs-target="#travelModal"
-                                onclick="loadApprovalForm(<?= $r['id'] ?>)">
+                                onclick="loadApprovalForm(<?= $r->id ?>)">
                                 Aprobar
                             </button>
                         </td>

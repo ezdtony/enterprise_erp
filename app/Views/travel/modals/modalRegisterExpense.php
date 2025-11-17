@@ -25,7 +25,7 @@
                             <select id="expense_request" name="request_id" class="form-select" required>
                                 <option value="">Seleccionar...</option>
                                 <?php foreach ($requests as $request): ?>
-                                    <option value="<?= $request->id ?>">#SDV-<?= $request->id ?></option>
+                                    <option value="<?= $request->id ?>" data-project-id="<?= $request->project_id ?>">#SDV-<?= $request->id ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -41,21 +41,8 @@
                             </select>
                         </div>
 
-                        <!-- Empleado -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Empleado</label>
-                            <select id="expense_employee" name="employee_id" class="form-select" required>
-                                <option value="">Seleccionar...</option>
-                                <?php foreach ($employees as $e): ?>
-                                    <option value="<?= $e->id ?>">
-                                        <?= $e->first_name . " " . $e->last_name ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
                         <!-- Proyecto -->
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label class="form-label fw-semibold">Proyecto</label>
                             <select id="expense_project" name="project_id" class="form-select" required>
                                 <option value="">Seleccionar...</option>
@@ -63,6 +50,43 @@
                                     <option value="<?= $p->id ?>"><?= $p->name ?></option>
                                 <?php endforeach; ?>
                             </select>
+                        </div>
+
+                        <!-- Switch: ¿Es deducible? -->
+                        <div class="row g-3">
+                            <div class="col-md-6 mt-3">
+                                <label class="form-label fw-semibold">¿Es deducible?</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="is_deductible">
+                                    <label class="form-check-label" for="is_deductible">Sí, es deducible</label>
+                                </div>
+                            </div>
+
+                            <!-- Switch: ¿incluye factura? -->
+                            <div class="col-md-6 mt-3" id="invoice_switch_section" style="display:none;">
+                                <label class="form-label fw-semibold">¿Incluye factura?</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="has_invoice">
+                                    <label class="form-check-label" for="has_invoice">Sí, subir factura</label>
+                                </div>
+                            </div>
+
+                            <!-- Sección factura -->
+                            <div id="invoice_file_section" style="display:none;">
+                                <div class="mb-3">
+                                    <label for="invoice_pdf" class="form-label">Subir PDF (obligatorio)</label>
+                                    <input type="file" class="form-control" id="invoice_pdf" name="invoice_pdf" accept=".pdf" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="invoice_xml" class="form-label">Subir XML (opcional)</label>
+                                    <input type="file" class="form-control" id="invoice_xml" name="invoice_xml" accept=".xml">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="cfdi_code" class="form-label">CFDI</label>
+                                    <input type="text" class="form-control" id="cfdi_code" name="cfdi_code" placeholder="CFDI" required>
+                                </div>
+                            </div>
+
                         </div>
 
                         <!-- Monto -->
@@ -87,36 +111,10 @@
                                 placeholder="Describe brevemente el gasto..." required></textarea>
                         </div>
 
-                        <!-- Switch: ¿Es deducible? -->
-                        <div class="col-md-6 mt-3">
-                            <label class="form-label fw-semibold">¿Es deducible?</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="is_deductible">
-                                <label class="form-check-label" for="is_deductible">Sí, es deducible</label>
-                            </div>
-                        </div>
-
-                        <!-- Switch: ¿incluye factura? -->
-                        <div class="col-md-6 mt-3" id="invoice_switch_section" style="display:none;">
-                            <label class="form-label fw-semibold">¿Incluye factura?</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="has_invoice">
-                                <label class="form-check-label" for="has_invoice">Sí, subir factura</label>
-                            </div>
-                        </div>
-
-                        <!-- Input factura -->
-                        <div class="col-12 mt-2" id="invoice_file_section" style="display:none;">
-                            <label class="form-label fw-semibold">Subir factura (PDF / XML / Imagen)</label>
-                            <input type="file" id="invoice_file" name="invoice_file"
-                                class="form-control"
-                                accept=".pdf,.xml,image/*">
-                        </div>
-
                         <!-- Fotografías -->
                         <div class="col-12 mt-3">
-                            <label class="form-label fw-semibold">Fotografías del ticket o evidencia</label>
-                            <input type="file" id="expense_photo" name="photos[]" class="form-control" accept="image/*" multiple>
+                            <label class="form-label fw-semibold">Fotografía del ticket o evidencia</label>
+                            <input type="file" id="expense_photo" name="photos[]" class="form-control" accept="image/*" multiple required>
                         </div>
 
                     </div>

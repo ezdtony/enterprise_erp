@@ -115,7 +115,7 @@ class TravelModel
             ON te.request_id = tr.id
 
         INNER JOIN employees e 
-            ON tr.employee_id = e.id
+            ON te.employee_id = e.id
 
         INNER JOIN projects p 
             ON tr.project_id = p.id
@@ -138,7 +138,7 @@ class TravelModel
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
         $success = $stmt->execute([
-            $data['category_id'],
+            $data['request_id'],
             $data['category_id'],
             $data['employee_id'],
             $data['project_id'],
@@ -158,18 +158,31 @@ class TravelModel
         INSERT INTO expense_photos (expense_id, file_path)
         VALUES (?, ?)
     ");
-
         return $stmt->execute([$expenseId, $filename]);
     }
-    public function storeExpenseInvoice($expenseId, $filename)
+
+    /**
+     * Guardar factura (PDF, XML o imagen) para un gasto.
+     * @param int $expenseId
+     * @param string $filename
+     * @param string $invoiceType // 'pdf', 'xml', 'jpg', 'png'
+     * @param string|null $cfdi_code
+     * @return bool
+     */
+    public function storeExpenseInvoice($expenseId, $filename, $invoiceType, $cfdi_code = null)
     {
-        $stmt = $this->db->prepare("
-        INSERT INTO expense_invoices (expense_id, file_path)
-        VALUES (?, ?)
-    ");
-
-        return $stmt->execute([$expenseId, $filename]);
+        $sql = "INSERT INTO expense_invoices 
+            (expense_id, invoice_type, file_path, cfdi_code, created_at)
+            VALUES (:expense_id, :invoice_type, :file_path, :cfdi_code, NOW())";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam(':expense_id', $expenseId, PDO::PARAM_INT);
+        $stmt->bindParam(':invoice_type', $invoiceType, PDO::PARAM_STR);
+        $stmt->bindParam(':file_path', $filename, PDO::PARAM_STR);
+        $stmt->bindParam(':cfdi_code', $cfdi_code, PDO::PARAM_STR);
+        return $stmt->execute();
     }
+
+
     public function getCategories()
     {
         $query = $this->db->query("SELECT id, name FROM expense_categories ORDER BY name ASC");
